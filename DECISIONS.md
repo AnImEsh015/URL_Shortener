@@ -13,3 +13,4 @@ This document records key design decisions, trade-offs, and rationale for interv
 | **HMAC-SHA256 for IP Addresses** | Raw client IPs are never stored in the database to protect user privacy (GDPR/compliance); IP hashes enable unique visitor counting (`COUNT(DISTINCT ip_hash)`). |
 | **Negative Caching (60s)** | Caches nonexistent short codes in Redis for 60 seconds to protect PostgreSQL against cache-penetration denial-of-service attacks. |
 | **404 Instead of 403 on Unauthorized Link Access** | Returning 404 for resources owned by other users prevents link enumeration and information leakage. |
+| **Email Validation via Regex** | Standard regex validation avoids adding unlisted dependencies (e.g. `email-validator`) while strictly enforcing valid email structures. |

@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
+from app.deps import extract_client_ip, rate_limiter
 from app.models import Link
 from app.services.cache import (
     get_cached_link,
@@ -34,25 +35,14 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-
-def extract_client_ip(request: Request) -> str:
-    """Extracts client IP address respecting the TRUSTED_PROXY configuration."""
-    if settings.TRUSTED_PROXY:
-        forwarded_for = request.headers.get("X-Forwarded-For")
-        if forwarded_for:
-            # First IP in the comma-separated chain is the original client IP
-            return forwarded_for.split(",")[0].strip()
-
-    if request.client and request.client.host:
-        return request.client.host
-
-    return "127.0.0.1"
+limit_redirect = rate_limiter("redirect", lambda: settings.RATE_LIMIT_REDIRECT_PER_MIN, 60)
 
 
 @router.get(
     "/{short_code}",
     response_class=RedirectResponse,
     status_code=status.HTTP_302_FOUND,
+    dependencies=[Depends(limit_redirect)],
     summary="Redirect short code to target destination",
 )
 def redirect_to_url(

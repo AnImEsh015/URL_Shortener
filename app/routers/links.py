@@ -21,6 +21,7 @@ from app.models import Link, User
 from app.schemas import LinkCreateRequest, LinkListResponse, LinkResponse, LinkUpdateRequest
 from app.services.cache import delete_cached_link
 from app.services.codes import MAX_COLLISION_RETRIES, generate_short_code
+from app.services.rate_limit import check_rate_limit
 from app.services.urls import (
     validate_custom_alias,
     validate_expiration,
@@ -60,6 +61,13 @@ def create_link(
     db: Session = Depends(get_db),
 ):
     """Creates a new shortened link with an optional custom alias and expiration."""
+    # Enforce per-user rate limiting for link creation
+    check_rate_limit(
+        identifier=f"user:{current_user.id}:create_link",
+        limit=settings.RATE_LIMIT_LINK_CREATE_PER_HOUR,
+        window_seconds=3600,
+    )
+
     validate_target_url(payload.url)
     validate_expiration(payload.expires_at)
 

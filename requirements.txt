@@ -1,0 +1,16 @@
+# Pinned production requirements
+fastapi==0.143.2
+uvicorn[standard]==0.54.0
+pydantic==2.14.1
+pydantic-settings==2.16.0
+sqlalchemy==2.1.4
+psycopg2-binary==2.9.13
+alembic==1.20.0
+redis==8.1.0
+celery==5.6.3
+pyjwt==2.15.1
+bcrypt==5.0.0
+python-multipart==0.0.32
+user-agents==2.2.0
+geoip2==5.3.0
+qrcode[pil]==8.2

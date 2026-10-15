@@ -11,9 +11,9 @@ Design Principles:
   preserving analytics tracking and access control.
 """
 
-from datetime import datetime, timezone
 import logging
-from typing import Optional
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
@@ -51,13 +51,13 @@ def redirect_to_url(
     db: Session = Depends(get_db),
 ):
     """Resolves short code, validates expiration and active status, and redirects with 302 Found."""
-    now_utc = datetime.now(timezone.utc)
+    now_utc = datetime.now(UTC)
     cached_data = get_cached_link(short_code)
 
-    link_id: Optional[int] = None
-    target_url: Optional[str] = None
-    expires_at_dt: Optional[datetime] = None
-    max_clicks: Optional[int] = None
+    link_id: int | None = None
+    target_url: str | None = None
+    expires_at_dt: datetime | None = None
+    max_clicks: int | None = None
     is_active: bool = True
 
     if cached_data is not None:
@@ -76,7 +76,7 @@ def redirect_to_url(
         if exp_val:
             expires_at_dt = datetime.fromisoformat(exp_val)
             if expires_at_dt.tzinfo is None:
-                expires_at_dt = expires_at_dt.replace(tzinfo=timezone.utc)
+                expires_at_dt = expires_at_dt.replace(tzinfo=UTC)
     else:
         # Cache miss: query PostgreSQL
         link = db.execute(
@@ -101,7 +101,7 @@ def redirect_to_url(
         ttl = 3600
         if expires_at_dt:
             if expires_at_dt.tzinfo is None:
-                expires_at_dt = expires_at_dt.replace(tzinfo=timezone.utc)
+                expires_at_dt = expires_at_dt.replace(tzinfo=UTC)
             seconds_until_expiry = int((expires_at_dt - now_utc).total_seconds())
             if seconds_until_expiry <= 0:
                 ttl = 1  # Expired or expiring immediately

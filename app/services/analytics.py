@@ -6,17 +6,17 @@ Security & Privacy:
 - GeoIP lookup is optional; fails gracefully if MaxMind DB is missing.
 """
 
-from datetime import datetime, timezone
 import hashlib
 import hmac
 import logging
 import os
-from typing import Optional, Tuple
+from datetime import UTC, datetime
+
 from sqlalchemy import update
 from user_agents import parse as parse_user_agent
 
+from app import db as app_db
 from app.config import settings
-from app.db import SessionLocal
 from app.models import Click, Link
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ def hash_client_ip(ip: str) -> str:
     return hmac.new(key, msg, hashlib.sha256).hexdigest()
 
 
-def parse_user_agent_string(ua_str: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+def parse_user_agent_string(ua_str: str) -> tuple[str | None, str | None, str | None]:
     """Extracts browser, OS, and device classification from User-Agent string."""
     if not ua_str:
         return None, None, None
@@ -63,7 +63,7 @@ def parse_user_agent_string(ua_str: str) -> Tuple[Optional[str], Optional[str], 
         return None, None, None
 
 
-def resolve_geoip(ip: str) -> Tuple[Optional[str], Optional[str]]:
+def resolve_geoip(ip: str) -> tuple[str | None, str | None]:
     """Resolves country name and city name from MaxMind GeoLite2 database if available."""
     global _geoip_reader, _geoip_warned
 
@@ -97,7 +97,7 @@ def process_click_event(
     clicked_at_iso: str,
 ) -> None:
     """Processes click event and stores it into PostgreSQL with atomic count increment."""
-    db = SessionLocal()
+    db = app_db.SessionLocal()
     try:
         # 1. Privacy-safe IP hashing
         ip_hash = hash_client_ip(client_ip)
@@ -111,7 +111,7 @@ def process_click_event(
         # 4. Parse timestamp
         clicked_at = datetime.fromisoformat(clicked_at_iso)
         if clicked_at.tzinfo is None:
-            clicked_at = clicked_at.replace(tzinfo=timezone.utc)
+            clicked_at = clicked_at.replace(tzinfo=UTC)
 
         # 5. Insert Click record
         click = Click(

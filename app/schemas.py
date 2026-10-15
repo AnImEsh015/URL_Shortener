@@ -2,7 +2,7 @@
 
 import re
 from datetime import datetime
-from typing import List, Optional
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
@@ -47,17 +47,17 @@ class TokenResponse(BaseModel):
 class LinkCreateRequest(BaseModel):
     """Payload for creating a new short link."""
     url: str = Field(..., max_length=2048, description="Target destination URL")
-    custom_alias: Optional[str] = Field(
+    custom_alias: str | None = Field(
         None,
         min_length=3,
         max_length=32,
         description="Optional custom short code alias",
     )
-    expires_at: Optional[datetime] = Field(
+    expires_at: datetime | None = Field(
         None,
         description="Optional expiration datetime in UTC (must be in the future)",
     )
-    max_clicks: Optional[int] = Field(
+    max_clicks: int | None = Field(
         None,
         gt=0,
         description="Optional maximum allowed clicks before link deactivates",
@@ -66,9 +66,9 @@ class LinkCreateRequest(BaseModel):
 
 class LinkUpdateRequest(BaseModel):
     """Payload for updating an existing link's settings."""
-    is_active: Optional[bool] = Field(None, description="Toggle link active state")
-    expires_at: Optional[datetime] = Field(None, description="Update link expiration timestamp")
-    max_clicks: Optional[int] = Field(None, gt=0, description="Update click limit (null to remove limit)")
+    is_active: bool | None = Field(None, description="Toggle link active state")
+    expires_at: datetime | None = Field(None, description="Update link expiration timestamp")
+    max_clicks: int | None = Field(None, gt=0, description="Update click limit (null to remove limit)")
 
 
 class LinkResponse(BaseModel):
@@ -79,8 +79,8 @@ class LinkResponse(BaseModel):
     short_code: str
     short_url: str
     original_url: str
-    expires_at: Optional[datetime]
-    max_clicks: Optional[int]
+    expires_at: datetime | None
+    max_clicks: int | None
     click_count: int
     created_at: datetime
     is_active: bool
@@ -88,7 +88,7 @@ class LinkResponse(BaseModel):
 
 class LinkListResponse(BaseModel):
     """Paginated collection of links."""
-    items: List[LinkResponse]
+    items: list[LinkResponse]
     total: int
     page: int
     page_size: int
@@ -102,8 +102,8 @@ class StatsSummaryResponse(BaseModel):
     """High-level analytics overview for a specific link."""
     total_clicks: int
     unique_visitors: int
-    first_click_at: Optional[datetime]
-    last_click_at: Optional[datetime]
+    first_click_at: datetime | None
+    last_click_at: datetime | None
 
 
 class TimeseriesPoint(BaseModel):

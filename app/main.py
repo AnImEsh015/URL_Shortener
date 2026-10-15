@@ -10,7 +10,7 @@ Configures:
 import contextvars
 import logging
 import uuid
-from typing import Dict
+
 from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -83,7 +83,7 @@ def create_app() -> FastAPI:
         "/health",
         tags=["Health"],
         summary="Service Health Check",
-        response_model=Dict[str, str],
+        response_model=dict[str, str],
     )
     def health_check():
         """Checks both PostgreSQL and Redis connectivity.
@@ -129,7 +129,7 @@ def create_app() -> FastAPI:
         )
 
     # Import and register routers
-    from app.routers import auth, links, stats, redirect
+    from app.routers import auth, links, redirect, stats
 
     app.include_router(auth.router, prefix="/auth", tags=["Auth"])
     app.include_router(links.router, prefix="/api/links", tags=["Links"])

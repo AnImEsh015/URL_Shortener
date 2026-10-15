@@ -1,6 +1,7 @@
 """FastAPI route dependencies for authentication and rate-limiting."""
 
-from typing import Callable, Optional
+from collections.abc import Callable
+
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
@@ -48,7 +49,7 @@ def get_current_user(
     if payload is None:
         raise credentials_exception
 
-    user_email: Optional[str] = payload.get("sub")
+    user_email: str | None = payload.get("sub")
     if not user_email:
         raise credentials_exception
 

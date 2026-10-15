@@ -4,7 +4,8 @@ Provides sync SQLAlchemy 2.x engine, SessionLocal factory, Declarative Base,
 and the get_db dependency for FastAPI endpoints.
 """
 
-from typing import Generator
+from collections.abc import Generator
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -23,7 +24,6 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class Base(DeclarativeBase):
     """Base class for all SQLAlchemy declarative models."""
-    pass
 
 
 def get_db() -> Generator[Session, None, None]:

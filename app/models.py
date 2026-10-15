@@ -5,8 +5,8 @@ Models include indexes, foreign key relationships with cascading deletes,
 and composite indexes for optimized analytics queries.
 """
 
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
+
 from sqlalchemy import (
     Boolean,
     DateTime,
@@ -22,7 +22,7 @@ from app.db import Base
 
 def utc_now() -> datetime:
     """Helper to return current timezone-aware UTC datetime."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class User(Base):
@@ -40,7 +40,7 @@ class User(Base):
     )
 
     # Relationships
-    links: Mapped[List["Link"]] = relationship(
+    links: Mapped[list["Link"]] = relationship(
         "Link",
         back_populates="user",
         cascade="all, delete-orphan",
@@ -65,17 +65,17 @@ class Link(Base):
         default=utc_now,
         nullable=False,
     )
-    expires_at: Mapped[Optional[datetime]] = mapped_column(
+    expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
-    max_clicks: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    max_clicks: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     click_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="links")
-    clicks: Mapped[List["Click"]] = relationship(
+    clicks: Mapped[list["Click"]] = relationship(
         "Click",
         back_populates="link",
         cascade="all, delete-orphan",
@@ -98,12 +98,12 @@ class Click(Base):
     )
     # Never store raw IP to protect user privacy; HMAC-SHA256 hex digest is 64 characters
     ip_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    country: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    city: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
-    device_type: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
-    browser: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    os: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    referrer: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
+    country: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    device_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    browser: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    os: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    referrer: Mapped[str | None] = mapped_column(String(2048), nullable=True)
 
     # Relationships
     link: Mapped["Link"] = relationship("Link", back_populates="clicks")

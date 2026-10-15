@@ -5,7 +5,7 @@ for development. Validates critical security constraints (such as refusing defau
 placeholder JWT secrets in production).
 """
 
-from typing import List, Union
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     CACHE_ENABLED: bool = True
 
     # Optional GeoIP Database Path
-    GEOIP_DB_PATH: Union[str, None] = None
+    GEOIP_DB_PATH: str | None = None
 
     # Rate Limiting Defaults
     RATE_LIMIT_LOGIN_PER_MIN: int = 5
@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_REDIRECT_PER_MIN: int = 300
 
     # CORS Allowed Origins
-    CORS_ORIGINS: Union[str, List[str]] = ["*"]
+    CORS_ORIGINS: str | list[str] = ["*"]
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -78,7 +78,7 @@ class Settings(BaseSettings):
         return v
 
     @property
-    def cors_origins_list(self) -> List[str]:
+    def cors_origins_list(self) -> list[str]:
         """Returns CORS origins as a list of strings."""
         if isinstance(self.CORS_ORIGINS, list):
             return self.CORS_ORIGINS

@@ -8,7 +8,7 @@ Enforces:
 """
 
 import logging
-from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -18,7 +18,12 @@ from app.config import settings
 from app.db import get_db
 from app.deps import get_current_user
 from app.models import Link, User
-from app.schemas import LinkCreateRequest, LinkListResponse, LinkResponse, LinkUpdateRequest
+from app.schemas import (
+    LinkCreateRequest,
+    LinkListResponse,
+    LinkResponse,
+    LinkUpdateRequest,
+)
 from app.services.cache import delete_cached_link
 from app.services.codes import MAX_COLLISION_RETRIES, generate_short_code
 from app.services.rate_limit import check_rate_limit
@@ -97,12 +102,12 @@ def create_link(
             db.commit()
             db.refresh(new_link)
             return build_link_response(new_link)
-        except IntegrityError:
+        except IntegrityError as exc:
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"The alias '{payload.custom_alias}' is already in use.",
-            )
+            ) from exc
 
     # 2. Random code generation with collision retry loop
     for attempt in range(MAX_COLLISION_RETRIES):
@@ -270,4 +275,3 @@ def delete_link(
 
     # Invalidate cache
     delete_cached_link(short_code)
-    return None

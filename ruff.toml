@@ -1,0 +1,13 @@
+# Ruff configuration for URL Shortener
+target-version = "py312"
+line-length = 120
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+    "B008",  # Allow Depends(), Query(), Field() in FastAPI endpoint parameter defaults
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["F401", "B011", "E501"]
+"alembic/*" = ["E501", "I001"]

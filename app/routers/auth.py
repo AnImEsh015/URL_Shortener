@@ -1,6 +1,7 @@
 """Authentication router for user registration and JWT login."""
 
 from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select

@@ -9,12 +9,12 @@ Validates:
 - Custom alias syntax and reserved system keywords
 """
 
-from datetime import datetime, timezone
 import ipaddress
 import re
 import socket
-from typing import Optional
+from datetime import UTC, datetime
 from urllib.parse import urlparse
+
 from fastapi import HTTPException, status
 
 from app.config import settings
@@ -112,15 +112,15 @@ def validate_target_url(url: str) -> None:
         )
 
 
-def validate_expiration(expires_at: Optional[datetime]) -> None:
+def validate_expiration(expires_at: datetime | None) -> None:
     """Ensures expiration timestamp is strictly in the future."""
     if expires_at is None:
         return
 
-    now_utc = datetime.now(timezone.utc)
+    now_utc = datetime.now(UTC)
     if expires_at.tzinfo is None:
         # Interpret naive datetime as UTC
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
+        expires_at = expires_at.replace(tzinfo=UTC)
 
     if expires_at <= now_utc:
         raise HTTPException(

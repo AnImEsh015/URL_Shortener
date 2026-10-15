@@ -6,14 +6,16 @@ Provides caching helpers with cache-aside semantics and negative caching.
 
 import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
+
 import redis
+
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 # Reusable Redis client instance
-_redis_client: Optional[redis.Redis] = None
+_redis_client: redis.Redis | None = None
 
 
 def get_redis_client() -> redis.Redis:
@@ -35,7 +37,7 @@ def set_redis_client(client: redis.Redis) -> None:
     _redis_client = client
 
 
-def get_cached_link(short_code: str) -> Optional[Dict[str, Any]]:
+def get_cached_link(short_code: str) -> dict[str, Any] | None:
     """Retrieves link cache entry by short code. Returns None on cache miss or Redis failure."""
     if not settings.CACHE_ENABLED:
         return None
@@ -50,13 +52,13 @@ def get_cached_link(short_code: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def set_cached_link(short_code: str, data: Dict[str, Any], ttl: int) -> None:
+def set_cached_link(short_code: str, data: dict[str, Any], ttl: int) -> None:
     """Caches link metadata with a defined TTL in seconds."""
     if not settings.CACHE_ENABLED or ttl <= 0:
         return
     try:
         r = get_redis_client()
-        r.setex(f"link:{short_code}", ttl, json.dumps(data))
+        r.set(f"link:{short_code}", json.dumps(data), ex=ttl)
     except Exception as e:
         logger.warning(f"Redis set_cached_link error for code {short_code}: {e}")
 
@@ -67,7 +69,7 @@ def set_negative_cached_link(short_code: str, ttl: int = 60) -> None:
         return
     try:
         r = get_redis_client()
-        r.setex(f"link:{short_code}", ttl, json.dumps({"status": "not_found"}))
+        r.set(f"link:{short_code}", json.dumps({"status": "not_found"}), ex=ttl)
     except Exception as e:
         logger.warning(f"Redis set_negative_cached_link error for code {short_code}: {e}")
 

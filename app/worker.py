@@ -8,7 +8,9 @@ Configured with:
 """
 
 import logging
+
 from celery import Celery
+
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -54,4 +56,4 @@ def record_click(
         )
     except Exception as exc:
         logger.error(f"Error processing click event for link {link_id}: {exc}")
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc

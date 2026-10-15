@@ -7,14 +7,15 @@ Features:
 - Timeseries grouping via PostgreSQL date_trunc
 """
 
-from datetime import datetime, timedelta, timezone
-from enum import Enum
 import io
 import json
 import logging
-from typing import Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
+from typing import Any
+
 import qrcode
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -30,13 +31,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-class TimeseriesInterval(str, Enum):
+class TimeseriesInterval(StrEnum):
     """Allowed intervals for timeseries aggregation."""
     day = "day"
     hour = "hour"
 
 
-class BreakdownDimension(str, Enum):
+class BreakdownDimension(StrEnum):
     """Allowed categorical breakdown dimensions."""
     country = "country"
     device = "device"
@@ -55,7 +56,7 @@ DIMENSION_COLUMN_MAP = {
 }
 
 
-def get_cached_json(cache_key: str) -> Optional[Any]:
+def get_cached_json(cache_key: str) -> Any | None:
     """Retrieves cached JSON payload from Redis."""
     if not settings.CACHE_ENABLED:
         return None
@@ -75,7 +76,7 @@ def set_cached_json(cache_key: str, data: Any, ttl: int = 60) -> None:
         return
     try:
         r = get_redis_client()
-        r.setex(cache_key, ttl, json.dumps(data, default=str))
+        r.set(cache_key, json.dumps(data, default=str), ex=ttl)
     except Exception as e:
         logger.warning(f"Stats cache write error for key {cache_key}: {e}")
 
@@ -136,7 +137,7 @@ def get_link_stats(
 
 @router.get(
     "/{id}/stats/timeseries",
-    response_model=List[TimeseriesPoint],
+    response_model=list[TimeseriesPoint],
     summary="Get click timeseries bucketed by day or hour",
 )
 def get_link_timeseries(
@@ -154,7 +155,7 @@ def get_link_timeseries(
     if cached:
         return [TimeseriesPoint(**point) for point in cached]
 
-    cutoff_dt = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff_dt = datetime.now(UTC) - timedelta(days=days)
 
     bucket_col = func.date_trunc(interval.value, Click.clicked_at).label("bucket")
     rows = db.execute(
@@ -168,7 +169,10 @@ def get_link_timeseries(
     ).all()
 
     points = [
-        {"bucket": row.bucket.isoformat() if hasattr(row.bucket, "isoformat") else str(row.bucket), "clicks": row.clicks}
+        {
+            "bucket": row.bucket.isoformat() if hasattr(row.bucket, "isoformat") else str(row.bucket),
+            "clicks": row.clicks,
+        }
         for row in rows
     ]
     set_cached_json(cache_key, points, ttl=60)
@@ -178,7 +182,7 @@ def get_link_timeseries(
 
 @router.get(
     "/{id}/stats/breakdown",
-    response_model=List[BreakdownPoint],
+    response_model=list[BreakdownPoint],
     summary="Get categorical click breakdown",
 )
 def get_link_breakdown(
@@ -274,7 +278,7 @@ def get_link_qr_code(
         try:
             r = get_redis_client()
             # Store binary string in Redis
-            r.setex(cache_key, 60, png_bytes.decode("latin1"))
+            r.set(cache_key, png_bytes.decode("latin1"), ex=60)
         except Exception as e:
             logger.warning(f"Error saving QR cache: {e}")
 

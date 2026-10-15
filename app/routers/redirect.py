@@ -142,6 +142,9 @@ def redirect_to_url(
     if max_clicks is not None and link_id is not None:
         try:
             r = get_redis_client()
+            if not r.exists(f"link:{link_id}:clicks"):
+                db_clicks = db.execute(select(Link.click_count).where(Link.id == link_id)).scalar_one_or_none()
+                r.set(f"link:{link_id}:clicks", db_clicks or 0, nx=True)
             current_clicks = r.incr(f"link:{link_id}:clicks")
             if current_clicks > max_clicks:
                 raise HTTPException(

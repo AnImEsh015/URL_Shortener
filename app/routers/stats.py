@@ -9,10 +9,12 @@ Features:
 
 from datetime import datetime, timedelta, timezone
 from enum import Enum
+import io
 import json
 import logging
 from typing import Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+import qrcode
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -216,3 +218,65 @@ def get_link_breakdown(
     set_cached_json(cache_key, points, ttl=60)
 
     return [BreakdownPoint(**p) for p in points]
+
+
+@router.get(
+    "/{id}/qr",
+    summary="Get QR code image (PNG) for shortened link",
+    responses={
+        200: {
+            "content": {"image/png": {}},
+            "description": "PNG image binary stream of the QR code.",
+        }
+    },
+)
+def get_link_qr_code(
+    id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generates a high-contrast PNG QR code for the shortened link.
+
+    Cached in Redis for 60 seconds.
+    """
+    link = verify_link_ownership(id, current_user, db)
+
+    cache_key = f"stats:{id}:qr"
+    if settings.CACHE_ENABLED:
+        try:
+            r = get_redis_client()
+            cached_bytes = r.get(cache_key)
+            if cached_bytes:
+                # Redis returns string or bytes; if string, encode
+                raw_bytes = cached_bytes if isinstance(cached_bytes, bytes) else cached_bytes.encode("latin1")
+                return Response(content=raw_bytes, media_type="image/png")
+        except Exception as e:
+            logger.warning(f"Error reading QR cache: {e}")
+
+    short_url = f"{settings.BASE_URL.rstrip('/')}/{link.short_code}"
+
+    # Generate QR Code using Pillow PIL
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(short_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    png_bytes = buffer.getvalue()
+
+    if settings.CACHE_ENABLED:
+        try:
+            r = get_redis_client()
+            # Store binary string in Redis
+            r.setex(cache_key, 60, png_bytes.decode("latin1"))
+        except Exception as e:
+            logger.warning(f"Error saving QR cache: {e}")
+
+    return Response(content=png_bytes, media_type="image/png")
+

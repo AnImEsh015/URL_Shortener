@@ -2,11 +2,10 @@
 
 Reads configuration parameters from environment variables with sensible defaults
 for development. Validates critical security constraints (such as refusing default
-placeholder JWT secrets in production).
+placeholder JWT secrets in production) and normalizes database and cache URLs.
 """
 
-
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,12 +19,12 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/shortener"
     TEST_DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/shortener_test"
 
-    # Redis Connection
+    # Redis Connection (Supports redis:// and rediss:// TLS URLs)
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    # Celery Configuration
-    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
-    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
+    # Celery Configuration (Optional; derived from REDIS_URL if not provided)
+    CELERY_BROKER_URL: str | None = None
+    CELERY_RESULT_BACKEND: str | None = None
     CELERY_ALWAYS_EAGER: bool = False
 
     # Security & JWT Configuration
@@ -60,7 +59,9 @@ class Settings(BaseSettings):
     @field_validator("DATABASE_URL", "TEST_DATABASE_URL")
     @classmethod
     def normalize_database_url(cls, v: str) -> str:
-        """Ensures psycopg2 driver is explicitly used with SQLAlchemy 2.x."""
+        """Normalizes Render's postgres:// or standard postgresql:// to postgresql+psycopg2://."""
+        if v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+psycopg2://", 1)
         if v.startswith("postgresql://"):
             return v.replace("postgresql://", "postgresql+psycopg2://", 1)
         return v
@@ -69,7 +70,6 @@ class Settings(BaseSettings):
     @classmethod
     def validate_jwt_secret(cls, v: str, info) -> str:
         """Enforces that production deployments do NOT run with the default placeholder secret."""
-        # Check if environment is production
         env = info.data.get("ENV") if info.data else None
         if env == "production" and ("insecure" in v or "change-in-production" in v or len(v) < 32):
             raise ValueError(
@@ -77,14 +77,39 @@ class Settings(BaseSettings):
             )
         return v
 
+    @model_validator(mode="after")
+    def derive_redis_and_celery_urls(self) -> "Settings":
+        """Derives Celery broker and result backend URLs from REDIS_URL when unspecified."""
+        import os
+
+        if not self.CELERY_BROKER_URL:
+            self.CELERY_BROKER_URL = self.REDIS_URL
+        if not self.CELERY_RESULT_BACKEND:
+            self.CELERY_RESULT_BACKEND = self.REDIS_URL
+
+        # Automatic fallback for BASE_URL on Render if not manually overridden
+        render_external_url = os.getenv("RENDER_EXTERNAL_URL")
+        if render_external_url and self.BASE_URL == "http://localhost:8000":
+            self.BASE_URL = render_external_url.rstrip("/")
+        return self
+
     @property
     def cors_origins_list(self) -> list[str]:
-        """Returns CORS origins as a list of strings."""
+        """Returns CORS origins as a list of strings, auto-prepending https/http for bare domains."""
         if isinstance(self.CORS_ORIGINS, list):
-            return self.CORS_ORIGINS
-        if isinstance(self.CORS_ORIGINS, str):
-            return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
-        return ["*"]
+            raw = self.CORS_ORIGINS
+        elif isinstance(self.CORS_ORIGINS, str):
+            raw = [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        else:
+            raw = ["*"]
+
+        origins = []
+        for o in raw:
+            origins.append(o)
+            if o != "*" and not o.startswith(("http://", "https://")):
+                origins.append(f"https://{o}")
+                origins.append(f"http://{o}")
+        return origins
 
 
 settings = Settings()

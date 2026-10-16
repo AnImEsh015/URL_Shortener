@@ -18,12 +18,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code and database migrations
+# Copy application code, database migrations, and startup script
 COPY app/ ./app/
 COPY alembic/ ./alembic/
 COPY alembic.ini .
+COPY start.sh .
+RUN chmod +x start.sh
 
 EXPOSE 8000
 
-# Default command (overridden in docker-compose.yml for specific roles)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default command runs alembic migrations, background celery worker, and uvicorn
+# (Overridden in docker-compose.yml for separated local dev containers)
+CMD ["./start.sh"]

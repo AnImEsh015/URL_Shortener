@@ -9,3 +9,4 @@
 - [x] Phase 7: Tests (comprehensive pytest suite, test DB, fakeredis, real measured coverage)
 - [x] Phase 8: CI and Load Testing (GitHub Actions CI workflow, locustfile.py, benchmarking instructions)
 - [x] Phase 9: Documentation (README.md, architecture diagrams, decision records, final verification)
+- [x] Phase 10: Render Free Tier Deployment (single-container start.sh, Render Blueprint render.yaml, TLS Redis/Postgres URL normalization, 512MB RAM optimization)

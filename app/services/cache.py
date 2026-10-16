@@ -19,14 +19,21 @@ _redis_client: redis.Redis | None = None
 
 
 def get_redis_client() -> redis.Redis:
-    """Returns a singleton Redis client instance configured with timeouts."""
+    """Returns a singleton Redis client instance configured with timeouts and TLS support."""
     global _redis_client
     if _redis_client is None:
+        redis_kwargs: dict[str, Any] = {
+            "decode_responses": True,
+            "socket_timeout": 2.0,
+            "socket_connect_timeout": 2.0,
+        }
+        if settings.REDIS_URL.startswith("rediss://"):
+            # Render Key Value TLS support
+            redis_kwargs["ssl_cert_reqs"] = None
+
         _redis_client = redis.Redis.from_url(
             settings.REDIS_URL,
-            decode_responses=True,
-            socket_timeout=2.0,
-            socket_connect_timeout=2.0,
+            **redis_kwargs,
         )
     return _redis_client
 

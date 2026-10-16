@@ -244,41 +244,50 @@ A realistic Locust load testing suite is included in `locustfile.py`. It simulat
 
 ---
 
-## Deployment Guide (Render / Railway)
+## Deploying to Render
 
-### 1. Environment Setup
-Provision a PostgreSQL instance (version 16) and a Redis instance (version 7). Configure the following environment variables in your deployment dashboard:
-```env
-ENV=production
-BASE_URL=https://your-domain.up.railway.app
-DATABASE_URL=postgresql+psycopg2://<user>:<password>@<db-host>:5432/<dbname>
-REDIS_URL=redis://<redis-host>:6379/0
-CELERY_BROKER_URL=redis://<redis-host>:6379/1
-CELERY_RESULT_BACKEND=redis://<redis-host>:6379/2
-JWT_SECRET=<generate-at-least-32-random-characters>
-IP_HASH_SALT=<generate-random-salt-string>
-REJECT_PRIVATE_IPS=true
-TRUSTED_PROXY=true
-```
+The repository includes a ready-to-deploy Render Blueprint (`render.yaml`) configured for Render's **Free Tier**.
 
-### 2. Running Database Migrations
-Run Alembic migrations during container deployment or release phase:
-```bash
-alembic upgrade head
-```
+Because Render does not offer a free background worker tier, our architecture runs **both the FastAPI web server and the Celery analytics worker inside a single web container** via [`start.sh`](file:///Users/animeshkumar03/Desktop/URL_shortner/start.sh). On startup, it applies database migrations (`alembic upgrade head`), launches Celery in the background with `--concurrency=1`, and starts Uvicorn with 1 worker, keeping total memory well within Render's 512 MB free RAM ceiling.
 
-### 3. Health Checks & Probes
-Configure your platform's liveness and readiness probes to:
-- **Health Check Path**: `/health`
-- **Expected Status**: `200 OK`
-- If either PostgreSQL or Redis is unreachable, the endpoint returns `503 Service Unavailable`.
+> [!WARNING]
+> ### Free Tier Limitations & Warnings
+> 1. **Web Service Sleep / Cold Starts**: Free web services automatically spin down after ~15 minutes of idle time. The first request after sleeping will trigger a "cold start" taking approximately 50–60 seconds to boot the container.
+> 2. **PostgreSQL Expiration (30 Days)**: Render's free PostgreSQL databases expire and are automatically deleted **30 days** after creation.
+> 3. **Key Value Ephemeral Nature (No Persistence)**: Render Key Value (free plan) operates strictly in-memory without persistent disk snapshots. Any restarts will flush cached items and queue state (the API safely repopulates link caches from PostgreSQL upon misses).
 
-### 4. Optional MaxMind GeoLite2 Setup
-To enable geographic city/country analytics:
+### Step-by-Step Blueprint Deployment
+
+1. **Fork or Push to GitHub**:
+   Ensure your code (including `render.yaml`, `Dockerfile`, and `start.sh`) is committed and pushed to your GitHub repository.
+
+2. **Create a New Blueprint Instance on Render**:
+   - Log in to your [Render Dashboard](https://dashboard.render.com/).
+   - Click **New +** in the top navigation and select **Blueprint**.
+   - Connect your GitHub repository (`URL_Shortener`).
+   - Render automatically detects `render.yaml` and parses the resources:
+     - **Web Service**: `url-shortener` (Docker runtime, free plan, `/health` check).
+     - **PostgreSQL Database**: `url-shortener-db` (free plan).
+     - **Key Value Instance**: `url-shortener-kv` (free plan).
+   - Render will auto-generate secure 32+ character secrets for `JWT_SECRET` and `IP_HASH_SALT`.
+   - Click **Apply** to deploy all components in the same region.
+
+3. **Configure `BASE_URL`**:
+   - Once the web service finishes deploying, copy its public URL from the dashboard (e.g. `https://url-shortener-xxxx.onrender.com`).
+   - Go to your `url-shortener` Web Service -> **Environment** tab.
+   - Set `BASE_URL` to your service URL (`https://url-shortener-xxxx.onrender.com`) and save changes.
+   *(Note: The application also includes an automatic fallback to `RENDER_EXTERNAL_URL` if `BASE_URL` is omitted).*
+
+4. **Verify Deployment**:
+   - Check the health check endpoint: `https://<your-service>.onrender.com/health` (should return `{"status":"ok","database":"ok","redis":"ok"}`).
+   - Visit interactive API docs: `https://<your-service>.onrender.com/docs`.
+
+### Optional MaxMind GeoLite2 Setup
+To enable geographic city/country tracking in analytics:
 1. Register for a free MaxMind account at [dev.maxmind.com](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data).
 2. Download `GeoLite2-City.mmdb`.
-3. Mount or place the file on the server and set `GEOIP_DB_PATH=/path/to/GeoLite2-City.mmdb`.
-4. If omitted, the service functions normally and stores country/city as `NULL`.
+3. Provide the database file via container volume or build step and set `GEOIP_DB_PATH=/path/to/GeoLite2-City.mmdb`.
+4. If omitted, the service functions normally and logs country/city as `NULL`.
 
 ---
 

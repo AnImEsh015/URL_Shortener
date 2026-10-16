@@ -87,9 +87,9 @@ class Settings(BaseSettings):
         if not self.CELERY_RESULT_BACKEND:
             self.CELERY_RESULT_BACKEND = self.REDIS_URL
 
-        # Automatic fallback for BASE_URL on Render if not manually overridden
+        # Automatic fallback for BASE_URL on Render if not manually overridden to a custom domain
         render_external_url = os.getenv("RENDER_EXTERNAL_URL")
-        if render_external_url and self.BASE_URL == "http://localhost:8000":
+        if render_external_url and ("localhost" in self.BASE_URL or "url-shortener.onrender.com" in self.BASE_URL):
             self.BASE_URL = render_external_url.rstrip("/")
         return self
 

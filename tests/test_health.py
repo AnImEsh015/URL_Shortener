@@ -39,3 +39,10 @@ def test_health_check_redis_down(client):
         data = resp.json()
         assert data["status"] == "unhealthy"
         assert data["redis"] == "down"
+
+
+def test_root_redirects_to_docs(client):
+    """Verifies that visiting the root path / redirects to /docs."""
+    resp = client.get("/", follow_redirects=False)
+    assert resp.status_code in (302, 307)
+    assert resp.headers["location"] == "/docs"

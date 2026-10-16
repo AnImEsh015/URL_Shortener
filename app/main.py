@@ -13,7 +13,7 @@ import uuid
 
 from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import text
 
 from app.config import settings
@@ -78,7 +78,16 @@ def create_app() -> FastAPI:
             logger.info(f"Finished request {request.method} {request.url.path}")
             request_id_ctx.reset(token)
 
-    # 3. Health Check Endpoint
+    # 3. Root Endpoint (Redirects to interactive Swagger documentation)
+    @app.get(
+        "/",
+        include_in_schema=False,
+    )
+    def root():
+        """Redirects root path to interactive Swagger documentation."""
+        return RedirectResponse(url="/docs")
+
+    # 4. Health Check Endpoint
     @app.get(
         "/health",
         tags=["Health"],

@@ -45,4 +45,3 @@ databases:
     plan: free
     region: oregon
     databaseName: shortener
-    user: postgres

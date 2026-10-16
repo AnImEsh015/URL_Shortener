@@ -1,11 +1,17 @@
 # Production-Style URL Shortener & Analytics Platform
 
 [![CI](https://github.com/AnImEsh015/URL_Shortener/actions/workflows/ci.yml/badge.svg)](https://github.com/AnImEsh015/URL_Shortener/actions/workflows/ci.yml)
+[![Live Demo](https://img.shields.io/badge/Render-Live%20Demo-46E3B7.svg)](https://url-shortener-99ta.onrender.com/docs)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791.svg)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-7-DC382D.svg)](https://redis.io/)
 [![Coverage](https://img.shields.io/badge/Coverage-88%25-brightgreen.svg)]()
+
+> 🚀 **Live Production API**: [https://url-shortener-99ta.onrender.com](https://url-shortener-99ta.onrender.com)  
+> 📖 **Interactive Swagger UI**: [https://url-shortener-99ta.onrender.com/docs](https://url-shortener-99ta.onrender.com/docs)  
+> 🏥 **Health Check**: [https://url-shortener-99ta.onrender.com/health](https://url-shortener-99ta.onrender.com/health)  
+> *(Deployed on Render Free Tier with Render PostgreSQL & Render Key Value / Valkey)*
 
 A production-style URL shortener and click-analytics backend engineered with simplicity, maintainability, and horizontal scalability in mind. Built with **Python 3.12**, **FastAPI**, **PostgreSQL 16**, **Redis 7**, and **Celery 5**.
 
@@ -279,8 +285,9 @@ Because Render does not offer a free background worker tier, our architecture ru
    *(Note: The application also includes an automatic fallback to `RENDER_EXTERNAL_URL` if `BASE_URL` is omitted).*
 
 4. **Verify Deployment**:
-   - Check the health check endpoint: `https://<your-service>.onrender.com/health` (should return `{"status":"ok","database":"ok","redis":"ok"}`).
-   - Visit interactive API docs: `https://<your-service>.onrender.com/docs`.
+   - Live URL: [`https://url-shortener-99ta.onrender.com`](https://url-shortener-99ta.onrender.com)
+   - Interactive API docs: [`https://url-shortener-99ta.onrender.com/docs`](https://url-shortener-99ta.onrender.com/docs)
+   - Health check endpoint: [`https://url-shortener-99ta.onrender.com/health`](https://url-shortener-99ta.onrender.com/health) (returns `{"status":"ok","database":"ok","redis":"ok"}`).
 
 ### Optional MaxMind GeoLite2 Setup
 To enable geographic city/country tracking in analytics:
